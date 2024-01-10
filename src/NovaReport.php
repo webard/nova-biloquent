@@ -93,7 +93,7 @@ abstract class NovaReport extends Resource
     /**
      * @return array<mixed>
      */
-    abstract public function filterFields(NovaRequest $request): array;
+    abstract public function reportFields(NovaRequest $request): array;
 
     /**
      * Get the filters that are available for the given request.
@@ -189,7 +189,7 @@ abstract class NovaReport extends Resource
 
         $return = [];
 
-        foreach ($this->filterFields($request) as $field) {
+        foreach ($this->reportFields($request) as $field) {
             $withId = $field->attribute.'_id';
             if (isset($fields[$field->attribute])) {
                 $return[] = $field;
