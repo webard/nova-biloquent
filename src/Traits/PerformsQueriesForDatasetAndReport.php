@@ -60,6 +60,9 @@ trait PerformsQueriesForDatasetAndReport
                 }
             }
 
+            // // TODO: it is necessary to work first enter to request, because ordering is applied to id column
+            // $query->addSelect($query->getModel()->getTable().'.id');
+
             // Enable searching and withTrashed on dataset query
             $query = static::initializeQuery($request, $query, (string) $search, $withTrashed);
 
@@ -77,13 +80,23 @@ trait PerformsQueriesForDatasetAndReport
             static::reportQuery($request, $query);
         });
 
+        // Disable default ordering if orderBy and orderByDirection are not set
+        // TODO: maybe we should remove only the default ordering by id, not all orderings, because ordering can be applied in the reportQuery method too
+        if (empty($request->get('orderBy')) || empty($request->get('orderByDirection'))) {
+            $query->getQuery()->orders = [];
+        }
+
         // This method is necessary to run report
         // @phpstan-ignore-next-line method is available in Webard\Biloquent\Report
         return $query->prepare();
 
     }
 
-    protected static function splitFiltersForDatasetAndReport($filters)
+    /**
+     * @param  array<mixed>  $filters
+     * @return array<mixed>
+     */
+    protected static function splitFiltersForDatasetAndReport(array $filters): array
     {
         $reportFilters = [];
         $datasetFilters = [];
