@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace Webard\NovaBiloquent;
 
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Nova\Filters\BooleanFilter;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Webard\Biloquent\Report;
 
-class ReportFields extends BooleanFilter
+class ReportSummary extends BooleanFilter
 {
     /**
-     * @param  array<string,mixed>  $grouping
+     * @param  array<string,mixed>  $fields
      */
     public function __construct(
-        public array $grouping = []
+        public array $fields = []
     ) {
     }
 
@@ -37,7 +38,7 @@ class ReportFields extends BooleanFilter
         }
 
         //@phpstan-ignore-next-line
-        return $query->getModel()->columns($grouping->toArray());
+        return $query->columns($grouping->toArray());
     }
 
     /**
@@ -47,6 +48,18 @@ class ReportFields extends BooleanFilter
      */
     public function options(NovaRequest $request)
     {
-        return $this->grouping;
+        $fields = (new Collection($this->fields))
+            ->mapWithKeys(fn ($group, $key) => [$this->prepareTitle($key) => $key])
+            ->toArray();
+
+        return $fields;
+    }
+
+    /**
+     * Prepare title for the filter
+     */
+    private function prepareTitle(string $key): string
+    {
+        return (string) Str::of($key)->replace('_id', '')->headline();
     }
 }
