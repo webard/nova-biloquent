@@ -47,7 +47,7 @@ abstract class NovaReport extends Resource
      */
     public static function indexQuery(NovaRequest $request, $query): Builder
     {
-        return $query->prepare();
+        return $query;
     }
 
     public static function authorizedToCreate(Request $request): bool
@@ -87,7 +87,7 @@ abstract class NovaReport extends Resource
 
     public static function searchable(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -102,7 +102,7 @@ abstract class NovaReport extends Resource
      */
     public function availableFilters(NovaRequest $request)
     {
-        return $this->resolveFilters($request)
+        return $this->resolveFiltersForReport($request)
             ->concat($this->resolveFiltersForDataset($request))
             ->filter->authorizedToSee($request)
             ->values();
@@ -125,13 +125,13 @@ abstract class NovaReport extends Resource
                 //$reportFilters[] = $filter;
             } else {
                 $datasetFilters[] = $filter;
-                if (isset($filter->field->belongsToRelationship)) {
-                    assert($filter->field instanceof BelongsTo);
-                    // TODO: fetch from relation, not hardcoded
-                    $this->datasetSelects[] = $filter->field->attribute.'_id';
-                } else {
-                    $this->datasetSelects[] = $filter->field->attribute;
-                }
+                // if (isset($filter->field->belongsToRelationship)) {
+                //     assert($filter->field instanceof BelongsTo);
+                //     // TODO: fetch from relation, not hardcoded
+                //     $this->datasetSelects[] = $filter->field->attribute.'_id';
+                // } else {
+                //     $this->datasetSelects[] = $filter->field->attribute;
+                // }
 
             }
 
@@ -141,11 +141,11 @@ abstract class NovaReport extends Resource
     }
 
     /**
-     * Get the filters for the given request.
+     * Get the filters that are available for Report Model
      *
      * @return \Illuminate\Support\Collection<int, mixed>
      */
-    public function resolveFilters(NovaRequest $request)
+    public function resolveFiltersForReport(NovaRequest $request)
     {
         $filters = array_values($this->filter($this->filters($request)));
 
@@ -176,11 +176,11 @@ abstract class NovaReport extends Resource
             $filters = json_decode(base64_decode($filtersString), true);
         }
 
+
+
         foreach ($filters as $k => $filter) {
             foreach ($filter as $class => $options) {
-                if ($class === ReportGrouping::class) {
-                    $fields = [...$fields, ...(new Collection($options))->filter(fn ($field) => $field === true)->toArray()];
-                } elseif ($class === ReportFields::class) {
+                if ($class === ReportGrouping::class || $class === ReportFields::class) {
                     $fields = [...$fields, ...(new Collection($options))->filter(fn ($field) => $field === true)->toArray()];
                 }
 
@@ -237,32 +237,45 @@ abstract class NovaReport extends Resource
         $withTrashed = TrashedStatus::DEFAULT)
     {
 
-        $query->getModel()->enhance(function ($b) use ($filters) {
-            foreach ($filters as $key => $filter) {
+        $reportFilters = [];
+        $datasetFilters = [];
 
-                if ($filter->filter instanceof ReportFields || $filter->filter instanceof ReportGrouping) {
-                    //$reportFilters[] = $filter;
-                } else {
-
-                    if (isset($filter->filter?->field->belongsToRelationship)) {
-                        assert($filter->filter->field instanceof BelongsTo);
-                        // TODO: fetch from relation, not hardcoded
-                        $b = $b->addSelect($filter->filter->field->attribute.'_id');
-                    } else {
-                        $b = $b->addSelect($filter->filter->field->attribute);
-                    }
-
-                }
-
+        foreach ($filters as $key => $filter) {
+            // ReportField and ReportGrouping are filters that are applied to the report Model
+            if ($filter->filter instanceof ReportFields || $filter->filter instanceof ReportGrouping) {
+                $reportFilters[] = $filter;
+            } else {
+                // Other filters are applied to the dataset
+                $datasetFilters[] = $filter;
             }
 
-            return $b;
+        }
+
+         $query = $query->enhance(function ($query) use ($datasetFilters, $request, $search, $withTrashed, $orderings) {
+
+
+            foreach ($datasetFilters as $filter) {
+
+                if (isset($filter->filter?->field->belongsToRelationship)) {
+                    assert($filter->filter->field instanceof BelongsTo);
+                    // TODO: fetch from relation, not hardcoded
+                    $query = $query->addSelect($filter->filter->field->attribute.'_id');
+                } else {
+                    $query = $query->addSelect($filter->filter->field->attribute);
+                }
+            }
+
+            $query = static::initializeQuery($request, $query, (string) $search, $withTrashed);
+            return static::applyFilters($request, $query, $datasetFilters);
         });
 
-        return static::applyOrderings(static::applyFilters(
-            $request, static::initializeQuery($request, $query, (string) $search, $withTrashed), $filters
+        $query =  static::applyOrderings(static::applyFilters(
+            $request, $query, $reportFilters
         ), $orderings)->tap(function ($query) use ($request): void {
             static::indexQuery($request, $query->with(static::$with));
         });
+
+        return $query->prepare();
+
     }
 }

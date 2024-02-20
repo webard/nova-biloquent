@@ -37,7 +37,7 @@ class ReportFields extends BooleanFilter
         }
 
         //@phpstan-ignore-next-line
-        return $query->getModel()->columns($grouping->toArray());
+        return $query->columns($grouping->toArray());
     }
 
     /**

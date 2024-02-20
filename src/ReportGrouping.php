@@ -36,8 +36,6 @@ class ReportGrouping extends BooleanFilter
             return $query;
         }
 
-        $query = $query->getModel();
-
         //@phpstan-ignore-next-line
         return $query->grouping($grouping->toArray());
     }
