@@ -17,7 +17,8 @@ class ReportGrouping extends BooleanFilter
      * @param  array<string,mixed>  $fields
      */
     public function __construct(
-        public array $fields = []
+        public array $fields = [],
+        public array $defaults = [],
     ) {
     }
 
@@ -53,6 +54,16 @@ class ReportGrouping extends BooleanFilter
             ->toArray();
 
         return $fields;
+    }
+
+    /**
+     * Get the filter's default options.
+     *
+     * @return array<string,mixed>
+     */
+    public function default(): array
+    {
+        return $this->defaults === [] ? parent::default() : $this->defaults;
     }
 
     /**

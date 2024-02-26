@@ -50,4 +50,20 @@ abstract class NovaReport extends Resource
     {
         return static::$datasetResource;
     }
+
+    /**
+     * @return array<string,bool>
+     */
+    public function defaultGrouping(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array<string,bool>
+     */
+    public function defaultSummary(): array
+    {
+        return [];
+    }
 }
