@@ -17,7 +17,8 @@ class ReportSummary extends BooleanFilter
      * @param  array<string,mixed>  $fields
      */
     public function __construct(
-        public array $fields = []
+        public array $fields = [],
+        public array $defaults = [],
     ) {
     }
 
@@ -30,7 +31,6 @@ class ReportSummary extends BooleanFilter
      */
     public function apply(NovaRequest $request, $query, $value)
     {
-
         $grouping = (new Collection($value))->filter(fn ($v) => $v === true)->keys();
 
         if ($grouping->isEmpty()) {
@@ -53,6 +53,16 @@ class ReportSummary extends BooleanFilter
             ->toArray();
 
         return $fields;
+    }
+
+    /**
+     * Get the filter's default options.
+     *
+     * @return array<string,mixed>
+     */
+    public function default(): array
+    {
+        return $this->defaults === [] ? parent::default() : $this->defaults;
     }
 
     /**

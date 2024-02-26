@@ -6,6 +6,7 @@ use Illuminate\Support\Collection;
 use Laravel\Nova\Filters\Filter;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Webard\Biloquent\Report;
+use Webard\NovaBiloquent\NovaReport;
 use Webard\NovaBiloquent\ReportDatasetFilters;
 use Webard\NovaBiloquent\ReportGrouping;
 use Webard\NovaBiloquent\ReportSummary;
@@ -34,9 +35,11 @@ trait ResolvesFilters
     public function summaryFilterForReport(NovaRequest $request): ReportSummary
     {
         assert($this->resource instanceof Report);
+        assert($this instanceof NovaReport);
 
         return new ReportSummary(
-            fields: $this->resource->aggregators()
+            fields: $this->resource->aggregators(),
+            defaults: $this->defaultSummary()
         );
     }
 
@@ -45,10 +48,13 @@ trait ResolvesFilters
      */
     public function groupingFilterForReport(NovaRequest $request): ReportGrouping
     {
+
         assert($this->resource instanceof Report);
+        assert($this instanceof NovaReport);
 
         return new ReportGrouping(
-            fields: $this->resource->groups()
+            fields: $this->resource->groups(),
+            defaults: $this->defaultGrouping()
         );
     }
 
@@ -59,6 +65,7 @@ trait ResolvesFilters
      */
     public function filtersForDataset(NovaRequest $request): array
     {
+        // @phpstan-ignore-next-line statis is a NovaReport
         return (new ReportDatasetFilters())->filters($request, static::datasetResource());
     }
 
